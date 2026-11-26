@@ -1,0 +1,950 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#F1F3F8"><meta name="apple-mobile-web-app-title" content="Palavra Secreta"><meta name="description" content="Palavra Secreta: jogo de palavras para 2 a 10 jogadores."><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>Palavra Secreta</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+/* Layout: app de uma tela por vez, coluna de até 520px, barra superior fixa, um cartão central por fase do jogo */
+:root{
+  --bg:#F1F3F8; --surface:#FFFFFF; --ink:#141C33; --muted:#566178; --line:#DAE0EC;
+  --accent:#D9480F; --accent-ink:#FFFFFF; --accent-soft:#FFE7DB;
+  --good:#0E7F55; --good-soft:#DDF3E8; --warn:#9A5B00; --warn-soft:#FFF0D1; --bad:#B83232; --bad-soft:#FBE3E3;
+  --font-display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --font-body:"DM Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1322; --surface:#171E35; --ink:#EDF0F8; --muted:#A0ABC8; --line:#2A3558;
+    --accent:#FF8A4C; --accent-ink:#1A0F08; --accent-soft:#3A2418;
+    --good:#4FD6A0; --good-soft:#12352A; --warn:#F2B84B; --warn-soft:#3A2D10; --bad:#FF8383; --bad-soft:#3E1C1F;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1322; --surface:#171E35; --ink:#EDF0F8; --muted:#A0ABC8; --line:#2A3558;
+  --accent:#FF8A4C; --accent-ink:#1A0F08; --accent-soft:#3A2418;
+  --good:#4FD6A0; --good-soft:#12352A; --warn:#F2B84B; --warn-soft:#3A2D10; --bad:#FF8383; --bad-soft:#3E1C1F;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:20;background:var(--bg)}
+.wrap{max-width:520px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 40px}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:11;background:var(--bg);display:flex;flex-direction:column;gap:8px;padding-block:10px;border-bottom:1px solid var(--line)}
+.topRow{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px}
+.brandBox{min-width:0}
+.brandBox .tag{font-size:12px;min-height:1em}
+.brand{font-family:var(--font-display);font-weight:800;font-size:19px;letter-spacing:-.01em}
+.tag{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+main{display:block;padding-top:20px}
+.screen{display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spacing:-.02em}
+h1{font-size:clamp(40px,12vw,56px);line-height:1;font-weight:800}
+h2{font-size:28px;line-height:1.1;font-weight:800}
+h3{font-size:18px;font-weight:700}
+p{margin:0}
+.lead{font-size:18px;color:var(--muted);max-width:34ch}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.btn{appearance:none;border:0;cursor:pointer;width:100%;min-height:56px;padding:12px 18px;border-radius:14px;font-family:var(--font-display);font-weight:700;font-size:18px;line-height:1.15;background:var(--accent);color:var(--accent-ink);text-wrap:balance}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.btn.soft{background:var(--accent-soft);color:var(--ink);border:2px solid var(--accent)}
+.btn.wide{width:100%}
+.btn.sm{width:auto;min-height:42px;padding:8px 14px;font-size:15px;border-radius:12px}
+.btn:focus-visible,.field:focus-visible,.opt:focus-visible,.x:focus-visible,summary:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.field{width:100%;min-height:56px;padding:10px 14px;font:inherit;font-size:20px;color:var(--ink);background:var(--bg);border:2px solid var(--line);border-radius:12px}
+.field:focus{border-color:var(--accent)}
+.row{display:flex;gap:10px;align-items:stretch}
+.row .field{flex:1;min-width:0}
+.row .btn{width:auto;flex:none}
+.label{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.counter{font-size:13px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.msg{font-size:15px;font-weight:500;padding:10px 12px;border-radius:10px;background:var(--warn-soft);color:var(--warn)}
+.msg.bad{background:var(--bad-soft);color:var(--bad)}
+.msg.info{background:var(--accent-soft);color:var(--ink);margin-bottom:12px}
+.players{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.players li{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.players .n{font-family:var(--font-display);font-weight:800;color:var(--accent);min-width:1.5ch;font-variant-numeric:tabular-nums}
+.players .name{flex:1;min-width:0;overflow-wrap:anywhere;font-weight:500}
+.x{appearance:none;border:0;background:transparent;color:var(--muted);cursor:pointer;width:36px;height:36px;border-radius:10px;font-size:22px;line-height:1}
+.opts{display:grid;gap:10px}
+.opt{appearance:none;cursor:pointer;text-align:left;width:100%;min-height:60px;padding:12px 16px;border-radius:14px;border:2px solid var(--line);background:var(--surface);color:var(--ink);font-family:var(--font-display);font-weight:700;font-size:22px;text-transform:capitalize}
+.opt[aria-checked="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.bigname{font-family:var(--font-display);font-weight:800;font-size:clamp(34px,10vw,46px);line-height:1.05;overflow-wrap:anywhere}
+.clue{font-family:var(--font-display);font-weight:800;font-size:clamp(34px,11vw,52px);line-height:1.05;overflow-wrap:anywhere;color:var(--accent)}
+.pct{font-family:var(--font-display);font-weight:800;font-size:72px;line-height:1;font-variant-numeric:tabular-nums}
+.pct small{font-size:32px}
+.meter{position:relative;height:16px;border-radius:10px;background:var(--bg);border:1px solid var(--line);overflow:hidden}
+.meter::after{content:"";position:absolute;left:90%;top:0;bottom:0;width:2px;background:var(--ink);opacity:.55}
+.fill{height:100%;width:0;border-radius:10px 0 0 10px;transition:width .7s cubic-bezier(.2,.8,.2,1)}
+.fill.low{background:var(--bad)} .fill.mid{background:var(--warn)} .fill.high{background:var(--good)}
+.tick{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:var(--bg);font-size:14px;font-variant-numeric:tabular-nums;max-width:100%;overflow-wrap:anywhere}
+.chip b{font-weight:700}
+.score{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.score li{display:grid;grid-template-columns:2ch 1fr auto auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line)}
+.score li:last-child{border-bottom:0}
+.score .r{font-family:var(--font-display);font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+.score .nm{min-width:0;overflow-wrap:anywhere;font-weight:500}
+.score .pt{font-family:var(--font-display);font-weight:800;font-size:22px;font-variant-numeric:tabular-nums}
+.delta{font-size:13px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--good-soft);color:var(--good);font-variant-numeric:tabular-nums}
+.score .delta.none{visibility:hidden}
+.delta.neg{background:var(--bad-soft);color:var(--bad)}
+.guess{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg)}
+.guess .who{font-weight:700;min-width:0;overflow-wrap:anywhere}
+.guess .what{color:var(--muted);overflow-wrap:anywhere}
+.guess.ok{border-color:var(--good);background:var(--good-soft)}
+.verdict{font-weight:700;white-space:nowrap}
+.verdict.ok{color:var(--good)} .verdict.no{color:var(--bad)}
+.example{border:1px dashed var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.example .pair{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline}
+.example .w{font-family:var(--font-display);font-weight:800;font-size:22px}
+details{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:0 16px}
+summary{cursor:pointer;font-weight:700;min-height:52px;display:flex;align-items:center}
+details ol{margin:0 0 14px;padding-left:20px;display:flex;flex-direction:column;gap:8px;color:var(--muted)}
+.modal{position:fixed;inset:0;z-index:30;background:rgba(10,14,28,.72);display:flex;align-items:center;justify-content:center;padding:24px}
+.modal .card{width:100%;max-width:420px;text-align:center;align-items:stretch}
+.secret{font-family:var(--font-display);font-weight:800;font-size:clamp(40px,13vw,60px);line-height:1;text-transform:capitalize;overflow-wrap:anywhere;color:var(--accent)}
+@media (prefers-reduced-motion:reduce){.fill{transition:none}}
+</style>
+</head><body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="topRow">
+      <div class="brandBox"><div class="brand">Palavra Secreta</div><div class="tag" id="roundTag"></div></div>
+      <button class="btn sm ghost" id="restartBtn" type="button">Começar de novo</button>
+    </div>
+    <div id="topExtra"></div>
+  </header>
+  <main id="view"></main>
+</div>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" hidden>
+  <div class="card">
+    <div class="label" id="modalTitle">Sua palavra secreta</div>
+    <div class="secret" id="secretWord"></div>
+    <button class="btn" id="closeModal" type="button">Fechar</button>
+  </div>
+</div>
+<div class="modal" id="restartModal" role="dialog" aria-modal="true" aria-labelledby="restartTitle" hidden>
+  <div class="card">
+    <div class="label" id="restartTitle">Começar de novo?</div>
+    <p>A partida atual e a pontuação serão apagadas.</p>
+    <button class="btn" id="restartKeep" type="button">Sim, com os mesmos jogadores</button>
+    <button class="btn ghost" id="restartAll" type="button">Sim, cadastrar jogadores de novo</button>
+    <button class="btn ghost" id="restartBack" type="button">Voltar</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+var MAX_CLUES = 7, OK = 90;
+
+/* [palavra, dica de resgate (99%), sinônimos, muito específicas, características, associadas, amplas, antônimos]
+   dentro de cada lista, quanto mais específico o termo, mais cedo ele aparece e maior é a %. termo:NN fixa o valor */
+var WORDS = [
+["casa","moradia","moradia lar residencia habitacao domicilio","telhado quintal garagem varanda sobrado chale","morar abrigo quarto sala cozinha banheiro parede janela porta familia","apartamento condominio predio imovel aluguel mudanca vizinho jardim","construcao lugar tijolo cidade","rua"],
+["gato","felino","bichano gatinho felino","miau gatil ronronar bigode","arranhar unhas rabo peludo felpudo pelo agil independente garras","leite rato novelo caixa dormir sofa janela telhado","pet bicho mascote animal","cachorro"],
+["cachorro","cão","cao cadela cachorrinho","latido latir canino focinho","fiel rabo coleira osso pelo dentes patas amigo abanar","dono passeio racao filhote veterinario pulga guarda","pet bicho mascote animal","gato"],
+["livro","livraria","livreto","leitura ler pagina paginas capa","autor romance escritor biblioteca estante folhas historia capitulo indice letras","escola estudo papel conhecimento ficcao poesia aprender biografia","objeto texto cultura",""],
+["mesa","mesinha","","tampo escrivaninha","cadeiras pernas toalha jantar refeicao quadrada redonda madeira apoio","cozinha sala escritorio comer trabalhar reuniao","movel objeto casa",""],
+["cadeira","assento","assento banquinho","encosto sentar poltrona","sentado pernas mesa estofada cadeirinha","sala cozinha escritorio banco descanso","movel objeto casa",""],
+["janela","vidraça","vidraca basculante","persiana vidro","abrir fechar cortina fachada transparente vista luz","parede casa ventilacao ar sacada peitoril","construcao",""],
+["porta","portão","portao","fechadura macaneta batente trinco","abrir fechar chave entrada saida madeira","casa parede campainha corredor","construcao",""],
+["carro","automóvel","automovel veiculo","volante motor pneu pneus","motorista dirigir rodas gasolina placa buzina freio cambio marcha","estrada rua garagem semaforo transito viagem","transporte maquina",""],
+["bicicleta","bike","bike bici magrela","pedal pedalar selim guidao","corrente ciclista rodas aro quadro capacete","esporte passeio ciclovia pneu","transporte",""],
+["avião","aeronave","aeronave jato aeroplano","asa asas turbina decolar aterrissar piloto","voo voar passageiro aeroporto cabine comissaria","viagem ceu nuvem altitude","transporte",""],
+["barco","embarcação","embarcacao","lancha veleiro canoa remo","navegar vela flutuar casco ancora proa","navio mar rio porto pesca","agua viagem transporte",""],
+["sapato","calçado","calcado","sola salto cadarco","calcar pe pes par couro","tenis sapatilha meia loja","roupa",""],
+["camisa","camiseta","camiseta blusa camisao","manga colarinho botao botoes","vestir roupa tecido gola","gravata social camisaria","moda",""],
+["chapéu","boné","","aba cartola palha","cabeca bone sol cobrir boina","moda roupa mago","acessorio",""],
+["relógio","horas","","ponteiro ponteiros cronometro","horas hora minutos segundos marcar tempo pulso","alarme parede pulseira despertador","aparelho",""],
+["telefone","celular","celular fone smartphone","ligar ligacao discar chamada","numero atender tela toque","whatsapp conversa contato","aparelho tecnologia",""],
+["computador","notebook","pc notebook laptop","teclado mouse monitor","tela internet programa digitar processador","trabalho jogo arquivo","tecnologia maquina",""],
+["caneta","esferográfica","esferografica","tinta ponta","escrever escrita assinar","papel caderno estojo","escola",""],
+["lápis","lapiseira","lapiseira","grafite apontador borracha","desenhar escrever ponta","papel caderno estojo","escola",""],
+["papel","folha","folha","sulfite caderno rascunho resma","escrever imprimir branco fino","escola escritorio livro","material",""],
+["escola","colégio","colegio","aluno professor aula","estudar sala classe recreio","crianca estudo caderno merenda","educacao",""],
+["professor","mestre","mestre docente","aula ensinar aluno lousa","escola giz","estudo sala prova","educacao","aluno"],
+["médico","doutor","doutor","consulta paciente jaleco estetoscopio","hospital clinico","remedio doenca clinica receita","saude","paciente"],
+["hospital","clínica","clinica","internacao uti enfermeiro paciente","doente doenca socorro medico","saude remedio cirurgia","lugar",""],
+["bola","bolinha","esfera","quicar chutar gol","redonda futebol jogar","esporte campo","objeto",""],
+["praia","litoral","litoral orla","areia mar onda biquini","sol guarda barraca","ferias verao agua","lugar",""],
+["mar","oceano","oceano","onda ondas salgada marinha","praia azul agua","peixe barco","natureza","terra deserto"],
+["rio","riacho","riacho ribeirao corrego","correnteza margem","agua ponte pescar","lago natureza barco","agua",""],
+["montanha","serra","serra monte","pico cume escalar neve","alto morro altitude","natureza trilha","lugar","vale planicie"],
+["árvore","arvoredo","arvoredo","tronco galho folha raiz","sombra floresta fruto","natureza madeira planta","verde",""],
+["flor","pétala","","petala buque","perfume jardim rosa colorida cheirosa","planta primavera vaso","natureza",""],
+["sol","solar","","quente:95 raio raios","calor luz estrela amarelo brilhante claro dia","ceu verao dourado bronzear nascer","natureza universo","lua noite frio:78"],
+["lua","luar","","satelite cheia crescente minguante","claro:86 noite eclipse brilhante prateada branca luminosa","ceu estrela escuro mare","natureza universo","sol dia"],
+["estrela","astro","astro","constelacao galaxia","brilhar brilho ceu noite cintilar","espaco universo luz","natureza",""],
+["chuva","temporal","temporal","aguaceiro tempestade garoa","molhar gotas pingos nuvem chover guarda","umidade frio tempo ceu","natureza clima","sol seca"],
+["vento","ventania","ventania brisa","soprar furacao ventilador","ar forte sopro","tempo cabelo folha","natureza clima","calmaria"],
+["fogo","chama","chama","labareda queimar fogueira brasa incendio","quente calor fumaca cinza","vermelho laranja luz acender","elemento","agua gelo"],
+["água","aguinha","","liquido molhado","beber sede transparente incolor mar rio chuva","copo piscina garrafa torneira","elemento natureza","fogo"],
+["pão","padaria","","paozinho padeiro","forno trigo farinha massa fermento crocante","manteiga fatia cafe lanche","comida",""],
+["leite","lácteo","lacteo","vaca mamadeira iogurte","branco bebida cremoso queijo manteiga caixa","cafe cereal copo","bebida",""],
+["queijo","muçarela","","mucarela parmesao minas coalho","queijaria ratoeira fatia derreter amarelo","rato pizza leite lanche","comida",""],
+["fruta","pomar","","pomar","suco vitamina doce madura casca polpa semente suculenta","maca banana laranja uva feira salada","comida natureza",""],
+["banana","bananeira","","bananeira cacho","amarela casca macaco curva prata nanica bananada fruta","doce vitamina mingau","comida",""],
+["maçã","macieira","","macieira newton adao","fruta vermelha verde crocante redonda","torta sidra pomar suco doce","comida",""],
+["café","cafeteira","cafezinho","xicara coador cafeina expresso cappuccino","bebida amargo preto quente moido grao","manha acordar acucar leite","bebida",""],
+["pizza","pizzaria","","pizzaiolo mussarela mucarela calabresa","massa forno fatia queijo italiana redonda molho","comida jantar delivery","comida",""],
+["bolo","bolinho","","confeitaria glace cobertura vela parabens","festa aniversario forno fatia massa fofo","doce sobremesa recheio chocolate","comida",""],
+["sorvete","gelado","gelado picole","casquinha sabor","gelo frio chocolate baunilha cremoso gelar","doce verao sobremesa","comida","quente"],
+["faca","canivete","canivete","cortar afiada lamina","cabo gume corte","cozinha garfo carne talher","objeto",""],
+["garfo","talher","talher","espetar dentes","comer prato faca colher mesa pontas","cozinha refeicao","objeto",""],
+["copo","taça","taca","beber vidro","agua suco bebida transparente","mesa liquido","objeto",""],
+["prato","pratinho","","louca","comer comida refeicao garfo redondo fundo raso","mesa cozinha jantar","objeto",""],
+["panela","caçarola","cacarola","tampa cabo pressao","cozinhar fogao fritar","cozinha comida fogo","objeto",""],
+["geladeira","refrigerador","refrigerador frigobar","freezer","gelar frio gelada","comida porta leite","eletrodomestico cozinha",""],
+["cama","colchão","leito","colchao lencol edredom cobertor","dormir travesseiro quarto descansar","sono descanso","movel casa",""],
+["travesseiro","almofada","","almofada fronha","cabeca pluma cama dormir macio fofo","quarto sono","objeto",""],
+["espelho","reflexo","","reflexo","refletir imagem penteadeira vidro rosto","banheiro vaidade","objeto",""],
+["chave","chaveiro","","chaveiro","fechadura trancar porta abrir","casa carro","objeto",""],
+["dinheiro","grana","grana cedula","moeda nota salario","banco real pagar","compra","economia","pobreza"],
+["cidade","metrópole","metropole municipio","prefeito urbano bairro","avenida predio","pais rua","lugar","campo roca"],
+["rua","avenida","","avenida travessa","calcada asfalto esquina transito","cidade carro","lugar","casa"],
+["ponte","viaduto","viaduto","","passarela atravessar rio","estrada","construcao",""],
+["igreja","templo","templo","capela catedral","padre missa sino cruz","fe","religiao",""],
+["castelo","fortaleza","","fortaleza","torre medieval cavaleiro","rei rainha princesa","historia lugar",""],
+["rei","monarca","monarca soberano","","coroa trono reino","rainha castelo realeza","governante","sudito plebeu"],
+["rainha","soberana","soberana","","coroa trono reino","rei realeza castelo","governante",""],
+["palhaço","circo","","circo nariz picadeiro","vermelho risada engracado peruca","festa crianca diversao","animacao",""],
+["música","melodia","melodia","cancao","cantar canto ritmo instrumento","cantor som","ouvir","silencio"],
+["guitarra","violão","","violao","cordas palheta rock","instrumento tocar","musica banda",""],
+["piano","teclado","","teclado","teclas pianista cauda","tocar concerto","musica instrumento",""],
+["cinema","filme","","filme telona ingresso pipoca","tela sala escuro poltrona","sessao lanche diversao","lugar",""],
+["foto","retrato","fotografia","retrato","camera selfie click","album imagem clique","memoria",""],
+["pintura","tinta","","quadro","pincel tinta tela","cor artista","arte parede",""],
+["mala","bagagem","bagagem","valise","viagem viajar","aeroporto roupa levar","ferias",""],
+["hotel","hospedagem","hospedagem","pousada","hospede diaria recepcao","quarto viagem","ferias",""],
+["festa","comemoração","comemoracao celebracao","","balada convidado","aniversario bolo musica","alegria","luto"],
+["ovo","gema","","oval gema clara","casca fragil frito cozido chocar quebrar branco galinha","redondo:72 omelete ninho cafe","comida",""],
+["vaca","boi","boi bovino","leite gado pasto muu","mancha manchada chifre chifres ubere carne rebanho","fazenda campo","animal",""],
+["cavalo","égua","egua","galope sela cavaleiro crina","montar relincho trotar potro","fazenda corrida rodeio","animal",""],
+["peixe","pescaria","","pescar anzol aquario nadar","escama escamas nadadeira barbatana guelra","agua rede mar rio","animal",""],
+["pássaro","ave","ave passarinho","penas ninho asa bico","voar cantar canto","ceu arvore gaiola","animal",""],
+["abelha","colmeia","","mel colmeia ferrao zumbido","inseto listrada amarela rainha","flor polen","animal",""],
+["formiga","formigueiro","","formigueiro","pequena operaria picada carregar rainha","inseto trilha comida","animal",""],
+["cobra","serpente","serpente","veneno peconha jararaca","rastejar escama bote presa","mato selva medo","animal",""],
+["leão","juba","","juba rugir","rei felino selva predador garras","savana africa zoologico","animal",""],
+["elefante","tromba","","tromba presas","grande orelhas cinza pesado","africa circo zoologico","animal",""],
+["macaco","primata","primata chimpanze","banana","galho cipo pular travesso","zoologico selva floresta","animal",""],
+["coração","cardíaco","cardiaco","batimento pulsar","peito amor sangue palpitar","saude medico paixao","orgao corpo",""],
+["olho","visão","","pupila cilios visao","enxergar ver ocular retina sobrancelha","rosto oculos lagrima","corpo",""],
+["mão","dedos","","dedo dedos palma unha","segurar pegar aperto pulso","braco luva anel","corpo",""],
+["dente","dentista","","siso canino molar","escovar mordida mastigar branco esmalte","dentista boca sorriso","corpo",""],
+["cabelo","cabeleireiro","","fio fios madeixa","pentear liso cacheado ondulado comprido","cabeleireiro corte escova shampoo","cabeca corpo",""],
+["chuveiro","ducha","ducha","banho","banheiro agua tomar quente","torneira sabonete toalha","casa",""],
+["sabonete","sabão","sabao","espuma","lavar banho cheiroso","banheiro limpeza toalha","higiene",""],
+["toalha","enxugar","","enxugar secar","banho felpuda macia pano","praia mesa rosto","tecido",""],
+["carta","envelope","","remetente selo correio","escrever mensagem enviar papel","caixa postal endereco","comunicacao",""],
+["bandeira","pavilhão","pavilhao","mastro hasteada","pais nacional pano cores","hino simbolo estado","simbolo",""],
+["tesouro","riqueza","riqueza","pirata bau mapa","ouro moedas joias enterrado","ilha aventura diamante","dinheiro",""],
+["ladrão","assaltante","assaltante gatuno","roubar roubo furto","bandido crime mascara","preso cadeia assalto","crime","policial"],
+["policial","polícia","","policia delegacia viatura","farda guarda algema prender","crime lei seguranca","autoridade","ladrao bandido"],
+["bombeiro","incêndio","","mangueira incendio","apagar fogo resgate capacete","sirene caminhao emergencia","socorro",""],
+["soldado","exército","","militar exercito","farda quartel arma fuzil","guerra patria batalha","forca",""],
+["trem","ferrovia","","locomotiva vagao trilho","ferrovia estacao maquinista","viagem passageiro apito","transporte",""],
+["ônibus","coletivo","coletivo busao","cobrador catraca ponto","motorista passageiro linha circular","rodoviaria viagem tarifa","transporte",""],
+["aeroporto","decolagem","","pista terminal embarque","voo avioes decolagem bagagem","viagem passageiro check","transporte lugar",""],
+["futebol","gol","","gol bola chuteira","time campo jogador torcida juiz","esporte copa estadio","jogo",""],
+["jornal","notícias","","noticia noticias manchete","reporter diario impresso leitura","papel banca","midia",""],
+["revista","periódico","periodico","capa materia assinatura","leitura folhear colorida","banca papel moda","midia",""]
+];
+
+//--PURE-START
+function norm(s){
+  return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z\s]/g,' ').replace(/\s+/g,' ').trim();
+}
+function lev(a,b){
+  var m=a.length,n=b.length;
+  if(!m) return n; if(!n) return m;
+  var prev=[],j,i;
+  for(j=0;j<=n;j++) prev[j]=j;
+  for(i=1;i<=m;i++){
+    var cur=[i];
+    for(j=1;j<=n;j++){
+      cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+    }
+    prev=cur;
+  }
+  return prev[n];
+}
+function hsh(s){ var x=5381,i; for(i=0;i<s.length;i++) x=((x<<5)+x+s.charCodeAt(i))|0; return Math.abs(x); }
+/* Chave de pronúncia do português: palavras com o mesmo som ficam com a mesma chave */
+function phon(s){
+  var t=String(s==null?'':s).toLowerCase().replace(/ç/g,'ss');
+  t=norm(t).replace(/ /g,'');
+  if(!t) return '';
+  t=t.replace(/ph/g,'f').replace(/ch/g,'x').replace(/lh/g,'L').replace(/nh/g,'N')
+     .replace(/qu(?=[ei])/g,'k').replace(/gu(?=[ei])/g,'g')
+     .replace(/rr/g,'R').replace(/ss/g,'S').replace(/(?:s|x)c(?=[ei])/g,'S')
+     .replace(/c(?=[ei])/g,'S').replace(/[cq]/g,'k')
+     .replace(/g(?=[ei])/g,'j').replace(/h/g,'')
+     .replace(/^r/,'R').replace(/([nls])r/g,'$1R')
+     .replace(/([aeiou])s(?=[aeiou])/g,'$1z').replace(/z$/,'S')
+     .replace(/w/g,'u').replace(/y/g,'i')
+     .replace(/o$/,'u').replace(/e$/,'i').replace(/l$/,'u')
+     .replace(/(.)\1+/g,'$1');
+  return t.replace(/S/g,'s');
+}
+function dice(a,b){
+  if(a.length<2||b.length<2) return a===b?1:0;
+  var m={},i,hit=0,g;
+  for(i=0;i<a.length-1;i++){ g=a.substr(i,2); m[g]=(m[g]||0)+1; }
+  for(i=0;i<b.length-1;i++){ g=b.substr(i,2); if(m[g]>0){ m[g]--; hit++; } }
+  return 2*hit/((a.length-1)+(b.length-1));
+}
+/* faixa de % de cada tipo de relação: do termo mais específico (primeiro da lista) ao menos específico (último) */
+var RANGE={syn:[98,93],esp:[97,90],car:[92,80],assoc:[78,52],broad:[55,30],ant:[84,70]};
+var KEYS=['syn','esp','car','assoc','broad','ant'];
+/* relações gerais por categoria: qualquer palavra cuja lista ampla cite a categoria herda estes termos (30 a 48%) */
+var CATS={
+ animal:'vivo bicho selvagem domestico patas cauda rabo olhos pele filhote natureza correr pelo grande pequeno barulho fome',
+ comida:'gostoso saboroso sabor cheiroso cheiro comer fome refeicao prato cozinhar mesa almoco jantar lanche fresco quente frio doce salgado',
+ bebida:'beber sede copo gelado quente refrescante liquido sabor garrafa gole',
+ objeto:'usar uso util mao fabricado plastico madeira metal vidro tamanho peso guardar comprar loja',
+ movel:'casa sala quarto madeira sentar guardar sofa estofado decoracao',
+ construcao:'casa parede tijolo cimento obra entrar sair abrir fechar predio',
+ transporte:'viajar viagem passageiro motorista velocidade rodas motor andar chegar sair rota',
+ roupa:'vestir usar tecido tamanho cor moda loja lavar costurar',
+ moda:'estilo cor roupa elegante tendencia vestir loja',
+ aparelho:'ligar desligar tela botao energia bateria tomada eletronico usar',
+ tecnologia:'digital internet tela energia eletronico moderno programa conectado',
+ natureza:'natural verde ar ceu terra paisagem bonito vento clima campo',
+ lugar:'ir visitar endereco rua mapa perto longe entrar sair gente pessoas',
+ escola:'aluno professor aprender estudar aula caderno',
+ educacao:'aluno professor aprender estudar ensinar conhecimento',
+ saude:'doenca remedio cuidar medico doente curar bem',
+ esporte:'jogar jogo time atleta treino corrida competicao vencer',
+ corpo:'humano parte pele osso sentir cabeca membro saude',
+ orgao:'corpo dentro humano funcionar vital',
+ elemento:'natureza energia essencial forca',
+ clima:'tempo temperatura estacao ceu nuvem',
+ jogo:'jogar divertido regra time ganhar perder',
+ crime:'lei policia preso errado delito',
+ midia:'noticia informacao ler televisao',
+ papel:'folha escrever branco dobrar',
+ tecido:'pano fio macio costura',
+ material:'usar fabricar resistente',
+ casa:'lar morar familia comodo dentro movel',
+ cozinha:'comida cozinhar fogao pia fome',
+ cidade:'urbano rua gente predio transito',
+ viagem:'viajar malas ferias passeio turismo hotel',
+ ferias:'descanso viagem lazer passeio diversao',
+ diversao:'alegria rir brincar festa lazer',
+ arte:'artista bonito criar cor expressao',
+ religiao:'fe deus rezar crenca oracao',
+ historia:'antigo passado tempo contar',
+ economia:'dinheiro comprar vender preco valor',
+ dinheiro:'pagar comprar valor preco',
+ governante:'poder reino lider mandar',
+ simbolo:'representar significado identidade',
+ acessorio:'usar enfeite moda',
+ eletrodomestico:'casa cozinha energia ligar tomada usar',
+ comunicacao:'mensagem falar escrever contato',
+ animacao:'festa crianca riso',
+ autoridade:'lei mandar ordem respeito',
+ socorro:'ajuda emergencia salvar urgente',
+ forca:'poder armado defesa',
+ higiene:'limpo limpeza banho cheiro cuidado',
+ verde:'natureza folha cor planta',
+ maquina:'motor funcionar peca energia'
+};
+CATS.pet=CATS.bicho=CATS.mascote=CATS.animal;
+function stemMatch(t,w,min,maxd){
+  var p=0; while(p<t.length && p<w.length && t[p]===w[p]) p++;
+  var sh=Math.min(t.length,w.length);
+  return (sh>=3 && (p>=4 || (sh<=4 && p>=3)) && p/sh>=(min||0.75) && Math.abs(t.length-w.length)<=(maxd||3)) ? p/sh : 0;
+}
+function stemScore(t,w){
+  var r=stemMatch(t,w); if(!r) return 0;
+  var sh=Math.min(t.length,w.length), j=(hsh(t+'|'+w)%3)-1;
+  return Math.max(88,Math.min(99,(sh<=4 ? 88+Math.round(r*7) : 94+Math.round(r*4))+j));
+}
+function termsOf(entry){
+  var out=[];
+  if(!entry) return out;
+  KEYS.forEach(function(k,i){
+    var str=entry[2+i]; if(!str) return;
+    var raws=str.split(/\s+/).filter(Boolean), n=raws.length, hi=RANGE[k][0], lo=RANGE[k][1];
+    raws.forEach(function(raw,idx){
+      var m=raw.match(/^(.+?):(\d+)$/), v;
+      if(m){ raw=m[1]; v=Math.min(99,+m[2]); }
+      else{
+        v=hi-(hi-lo)*(n>1?idx/(n-1):0)+(hsh(entry[0]+'|'+raw)%3)-1;
+        v=Math.max(lo,Math.min(hi,Math.round(v)));
+      }
+      var t=norm(raw).replace(/ /g,'');
+      if(t) out.push({t:t,p:v,k:k});
+    });
+  });
+  var seen={}, wn=norm(entry[0]).replace(/ /g,''); out.forEach(function(x){ seen[x.t]=1; });
+  (entry[6]||'').split(/\s+/).forEach(function(bd){
+    var key=norm(bd).replace(/ /g,''), list=CATS[key]; if(!list) return;
+    var gs=list.split(' '), n=gs.length;
+    gs.forEach(function(g,idx){
+      var t=norm(g).replace(/ /g,''); if(!t||seen[t]||t===wn||stemMatch(t,wn)) return;
+      seen[t]=1;
+      out.push({t:t,p:Math.round(48-14*(n>1?idx/(n-1):0))+(hsh(entry[0]+'|'+t)%3)-1,k:'broad',g:true});
+    });
+  });
+  return out;
+}
+function phonScore(t,w){
+  if(t.length<3||w.length<3) return 0;
+  var a=phon(t), b=phon(w);
+  if(!a||!b) return 0;
+  if(a===b) return 91+(hsh(t+'|'+w)%5);
+  var r=1-lev(a,b)/Math.max(a.length,b.length);
+  return (r>=0.75 && Math.min(a.length,b.length)>=3) ? 70+Math.round((r-0.75)/0.25*15) : 0;
+}
+/* O robô. Nunca devolve menos de 3%.
+   100 própria palavra | 93 a 98 sinônimo | 90 a 97 característica muito específica
+   80 a 92 característica que define a coisa | 70 a 84 antônimo | 91 a 95 som igual, 70 a 85 som parecido
+   52 a 78 associada | 30 a 55 relação ampla | 3 a 18 sem relação nenhuma */
+function localScore(clue,word,hint,entry,all){
+  var c=norm(clue), w=norm(word).replace(/ /g,'');
+  if(!c) return {pct:3,kind:'floor',exact:false};
+  var toks=c.split(' '), sq=c.replace(/ /g,'');
+  if(sq===w || toks.some(function(t){return t===w||t===w+'s'||t===w+'es';})) return {pct:100,kind:'exact',exact:true};
+  if(hint && sq===norm(hint).replace(/ /g,'')) return {pct:99,kind:'syn',exact:false};
+  var terms=termsOf(entry), cands=toks.length>1?[sq].concat(toks):toks;
+  var best=0, kind='floor', matched={};
+  function take(p,k){ if(p>best){ best=p; kind=k; } }
+  cands.forEach(function(t){
+    take(stemScore(t,w),'stem');
+    take(phonScore(t,w),'phon');
+    var r2=1-lev(t,w)/Math.max(t.length,w.length);
+    if(r2>=0.6) take(Math.round(r2*60),'sim');
+    terms.forEach(function(x){
+      var hit=0;
+      if(t===x.t||t===x.t+'s'||t===x.t+'es') hit=x.p;
+      else if(t.length>=4 && stemMatch(t,x.t,0.85,2)) hit=Math.max(1,x.p-(Math.abs(t.length-x.t.length)<=1?1:3));
+      if(hit){
+        take(hit,x.k);
+        if(toks.length===1 || t!==sq) matched[x.t]=Math.max(matched[x.t]||0,hit);
+      }
+    });
+  });
+  /* mais de uma característica na mesma dica deixa a dica mais específica */
+  var vals=Object.keys(matched).map(function(k){return matched[k];}).filter(function(v){return v>=40;});
+  if(vals.length>1 && kind!=='syn' && kind!=='ant' && best<97) best=Math.min(98,best+Math.min(8,(vals.length-1)*4));
+  /* parente distante: a dica é outra palavra do jogo que divide termos com esta */
+  if(best<45 && all){
+    var mine={}; terms.forEach(function(x){ if(!x.g) mine[x.t]=1; });
+    all.forEach(function(e){
+      if(e[0]===word) return;
+      var ew=norm(e[0]).replace(/ /g,'');
+      if(!cands.some(function(t){return t===ew||t===ew+'s';})) return;
+      var shared=0; termsOf(e).forEach(function(x){ if(!x.g && mine[x.t]) shared++; });
+      if(shared) take(Math.min(58,24+4*shared+(hsh(sq+'|'+word)%6)),'rel');
+    });
+  }
+  /* piso: nunca 0%. Sem relação nenhuma fica entre 3% e 18%, variando com a escrita */
+  var fl=3+Math.round(dice(sq,w)*8)+(hsh(sq+'|'+w)%8);
+  if(fl>best){ best=fl; kind='floor'; }
+  return {pct:Math.max(3,Math.min(99,Math.round(best))),kind:kind,exact:false};
+}
+function isCorrect(guess,word){
+  var g=norm(guess).replace(/ /g,''), w=norm(word).replace(/ /g,'');
+  if(!g) return false;
+  if(g===w || g===w+'s' || g===w+'es') return true;
+  return w.length>=6 && lev(g,w)<=1;
+}
+
+/* ---- validação das dicas: palavras que existem e dicas não repetidas ---- */
+var COMMON='eu tu ele ela nos vos eles elas voce voces meu minha seu sua nosso nossa este esta esse essa isso isto aquilo aquele aquela qual quais quem quando onde como porque porem mas ou se nao sim talvez muito pouco mais menos bem mal sempre nunca agora hoje ontem amanha aqui ali la ainda ja tambem so apenas tudo nada algo alguem ninguem cada outro outra todo toda todos todas mesmo mesma tanto quanto tao entre sobre sob ate desde contra durante antes depois dentro fora perto longe cima baixo frente atras lado meio fim inicio comeco um dois tres quatro cinco seis sete oito nove dez onze doze vinte trinta cem mil milhao primeiro segundo terceiro metade dobro par duplo ser estar ter haver ir vir fazer dizer poder querer saber ver dar ficar deixar passar levar trazer falar chamar pensar sentir olhar ouvir viver morrer nascer crescer comer beber dormir acordar andar correr pular nadar voar cair subir descer entrar sair abrir fechar ligar desligar pegar soltar segurar jogar brincar cantar dancar tocar escrever ler desenhar pintar cortar costurar cozinhar lavar limpar secar molhar queimar ferver gelar derreter quebrar consertar construir destruir comprar vender pagar custar ganhar perder achar procurar encontrar esconder mostrar ensinar aprender estudar trabalhar descansar cuidar proteger ajudar prender soltar bater empurrar puxar carregar jogar chutar lancar atirar pescar plantar colher cavar viajar dirigir pilotar navegar rezar beijar abracar rir chorar gritar sussurrar sorrir amar odiar gostar temer lembrar esquecer sonhar casa lar moradia apartamento predio quarto sala cozinha banheiro garagem quintal jardim telhado parede janela porta escada chao teto muro portao varanda sotao porao cama sofa mesa cadeira armario estante geladeira fogao forno pia vaso espelho tapete cortina lampada abajur ventilador televisao radio relogio telefone celular computador teclado tela cabo tomada chave fechadura cofre caixa sacola mala bolsa mochila carteira dinheiro moeda nota cartao banco preco troco pai mae filho filha irmao irma avo avos neto neta tio tia primo prima sobrinho marido esposa noivo noiva namorado namorada amigo amiga vizinho colega chefe patrao cabeca cabelo rosto cara testa olho olhos sobrancelha nariz boca labio lingua dente dentes orelha pescoco ombro braco cotovelo mao dedo unha peito barriga costas cintura perna joelho pe pes calcanhar pele osso musculo sangue coracao pulmao cerebro homem mulher menino menina crianca bebe jovem adulto idoso velho gente pessoa povo turma time equipe grupo cachorro cao gato cavalo vaca boi porco ovelha cabra galinha galo pato ganso peru coelho rato macaco elefante girafa leao tigre urso lobo raposa veado zebra camelo cobra jacare sapo tartaruga lagarto passaro pombo papagaio coruja aguia pinguim peixe tubarao baleia golfinho polvo lula caranguejo camarao abelha formiga aranha mosca mosquito borboleta barata besouro minhoca animal bicho pet mascote fera arvore planta flor folha galho raiz semente fruto grama mato floresta mata selva campo fazenda rio lago mar oceano praia ilha montanha morro serra vale deserto pedra areia terra barro lama fogo agua gelo neve chuva vento nuvem ceu sol lua estrela raio trovao tempestade furacao clima calor frio tempo dia noite manha tarde madrugada semana mes ano hora minuto segundo verao inverno outono primavera pao arroz feijao carne frango peixe ovo leite queijo manteiga iogurte sopa salada macarrao massa pizza hamburguer sanduiche batata tomate cebola alho cenoura alface milho banana maca laranja limao uva melancia abacaxi morango manga mamao pera pessego coco acucar sal pimenta azeite molho tempero bolo biscoito bolacha chocolate sorvete doce balas pipoca cafe cha suco refrigerante cerveja vinho vodka agua refeicao almoco jantar lanche prato copo xicara garfo faca colher panela frigideira jarra garrafa lata roupa camisa camiseta blusa calca bermuda saia vestido casaco jaqueta meia sapato tenis sandalia chinelo bota chapeu bone luva cinto gravata oculos anel colar brinco pulseira relogio terno uniforme pijama biquini sunga carro moto bicicleta onibus trem metro aviao barco navio helicoptero caminhao taxi carona rua avenida estrada ponte tunel esquina calcada semaforo placa transito viagem passagem aeroporto porto estacao rodoviaria escola aula professor aluno colega livro caderno lapis caneta borracha mochila prova nota recreio faculdade universidade curso diploma biblioteca quadro giz medico enfermeiro dentista policial bombeiro soldado juiz advogado engenheiro arquiteto professor cozinheiro padeiro pedreiro pintor motorista piloto marinheiro fazendeiro pescador ladrao artista cantor ator atriz musico palhaco mago rei rainha princesa principe bruxa fada gigante pirata heroi vilao hospital farmacia remedio doenca febre dor gripe tosse vacina cura saude consulta cirurgia igreja templo castelo palacio museu teatro cinema circo parque praca estadio mercado supermercado loja padaria restaurante bar hotel banco correio shopping feira cidade bairro pais estado capital bola gol jogo futebol basquete volei tenis corrida natacao luta boxe esporte campeonato copa medalha trofeu juiz regra campo quadra pista musica cancao som voz violao guitarra piano bateria flauta trompete tambor orquestra banda show festa danca baile carnaval vermelho azul verde amarelo laranja roxo rosa marrom preto branco cinza dourado prateado claro escuro colorido cor grande pequeno alto baixo gordo magro forte fraco rapido lento leve pesado largo estreito fundo raso novo velho bonito feio limpo sujo quente frio morno gelado seco molhado duro mole liso aspero doce salgado azedo amargo cheiroso fedido barulhento silencioso feliz triste bravo calmo corajoso medroso esperto bobo inteligente tonto engracado serio simpatico chato gentil educado famoso rico pobre cheio vazio aberto fechado certo errado facil dificil perigoso seguro proibido possivel impossivel perfeito sozinho junto livre preso amor odio medo raiva alegria tristeza saudade ciume paixao amizade paz guerra sorte azar sonho pesadelo segredo mentira verdade ideia pensamento memoria historia conto piada brincadeira jogo problema solucao resposta pergunta duvida erro cheiro gosto sabor barulho silencio luz sombra escuridao brilho fumaca cinza fogueira vela chama faisca bomba explosao ferramenta martelo prego parafuso chave serra furadeira machado pa enxada tesoura agulha linha corda fio rede balde vassoura escova pente sabonete shampoo toalha perfume espelho papel caneta tinta cola fita envelope carta selo foto quadro moldura mapa bandeira policia ladrao prisao crime lei justica tribunal juiz multa internet video jogo aplicativo app site rede mensagem email senha foto camera presente aniversario natal pascoa casamento batizado formatura ferias passeio acampamento piquenique churrasco tinha tem tinham foi era eram sao estou estava esta estao fui vou vai vamos faz fez feito dito visto sabe pode quer disse';
+var LOAN='show chip pop rap rock web club clube jazz funk bit set chat clip hip top lap net internet tablet notebook laptop desktop skate surf hobby tv dvd pc km cm kg ml mm ok oi tchau wifi mouse email app site online video hot dog ex';
+var STOPW={a:1,o:1,as:1,os:1,um:1,uma:1,uns:1,umas:1,de:1,do:1,da:1,dos:1,das:1,e:1,em:1,no:1,na:1,nos:1,nas:1,ao:1,aos:1,por:1,para:1,com:1,sem:1,que:1,se:1,ou:1,pra:1,pro:1};
+var KNOWN=null, KLIST=null;
+function buildKnown(words){
+  KNOWN={};
+  function add(str){ norm(str).split(' ').forEach(function(x){ if(x) KNOWN[x]=1; }); }
+  (words||[]).forEach(function(e){ e.forEach(function(f){ if(typeof f==='string') add(f.replace(/:\d+/g,'')); }); });
+  for(var k in CATS){ if(typeof CATS[k]==='string') add(CATS[k]); }
+  add(COMMON); add(LOAN);
+  KLIST=Object.keys(KNOWN);
+}
+function singular(t){
+  if(/(oes|aes|aos)$/.test(t)) return t.slice(0,-3)+'ao';
+  if(/ais$/.test(t)) return t.slice(0,-2)+'l';
+  if(/eis$/.test(t)) return t.slice(0,-3)+'el';
+  if(/(res|zes|ses)$/.test(t)&&t.length>4) return t.slice(0,-2);
+  if(/s$/.test(t)&&t.length>3) return t.slice(0,-1);
+  return t;
+}
+function isKnown(t){
+  if(KNOWN[t]) return true;
+  var v=[singular(t)];
+  if(/(a|o)$/.test(t)) v.push(t.slice(0,-1)+(t.slice(-1)==='a'?'o':'a'));
+  if(/(as|os)$/.test(t)) v.push(t.slice(0,-2)+'o', t.slice(0,-2)+'a');
+  if(/mente$/.test(t)) v.push(t.slice(0,-5));
+  if(/(inho|inha)s?$/.test(t)) v.push(t.replace(/(inho|inha)s?$/,'o'), t.replace(/(inho|inha)s?$/,'a'));
+  return v.some(function(x){ return KNOWN[x]; });
+}
+var KEYROW=/qwer|wert|erty|rtyu|tyui|yuio|uiop|asdf|sdfg|dfgh|fghj|ghjk|hjkl|zxcv|xcvb|cvbn|vbnm/;
+var MASH3={qwe:1,wer:1,ert:1,rty:1,tyu:1,yui:1,uio:1,iop:1,asd:1,sdf:1,dfg:1,fgh:1,ghj:1,hjk:1,jkl:1,zxc:1,xcv:1,cvb:1,vbn:1,bnm:1};
+function badWord(t){
+  if(isKnown(t)) return false;
+  if(t.length<2||t.length>22) return true;
+  if(!/[aeiou]/.test(t)) return true;
+  if(/(.)\1\1/.test(t)) return true;
+  if(/[^aeiou]{5,}/.test(t)) return true;
+  if(KEYROW.test(t)||MASH3[t]) return true;
+  if(/[bcdfghjkpqtvwy]$/.test(t)) return true;
+  if(t.length>=4){
+    for(var i=0;i<KLIST.length;i++){ var k=KLIST[i]; if(k.length>t.length && k.length<=t.length+3 && k.indexOf(t)===0) return true; }
+  }
+  return false;
+}
+function sameFamily(a,b){
+  a=singular(a); b=singular(b);
+  if(a===b) return true;
+  var m=Math.min(a.length,b.length), M=Math.max(a.length,b.length);
+  if(m<3) return false;
+  if((a.indexOf(b)===0||b.indexOf(a)===0) && M-m<=4) return true;
+  if(a.length===b.length && a.slice(0,-1)===b.slice(0,-1) && /[ao]$/.test(a) && /[ao]$/.test(b)) return true;
+  return false;
+}
+/* devolve '' se a dica pode seguir, ou a mensagem do problema */
+function checkClue(raw,prev,words){
+  if(!KNOWN) buildKnown(words);
+  var ts=norm(raw).split(' ').filter(function(x){return x&&!STOPW[x];});
+  if(!ts.length) return 'Escreva uma palavra de verdade na dica.';
+  for(var i=0;i<ts.length;i++){
+    if(badWord(ts[i])) return '"'+ts[i]+'" não parece uma palavra que existe. Escreva palavras completas. Essa tentativa não foi gasta.';
+  }
+  for(var j=0;j<(prev||[]).length;j++){
+    var pt=norm(prev[j]).split(' ').filter(function(x){return x&&!STOPW[x];});
+    for(var a=0;a<ts.length;a++) for(var b=0;b<pt.length;b++){
+      if(sameFamily(ts[a],pt[b])) return 'Essa dica repete ou contém uma que já foi dada ("'+prev[j]+'"). Tente outra, ela não gasta tentativa.';
+    }
+  }
+  return '';
+}
+//--PURE-END
+
+/* ---------- estado ---------- */
+var KEY='dica-certeira-v1', TTL=10*60*1000;
+function fresh(){
+  return {players:[],round:1,turn:0,phase:'home',options:[],picked:null,word:'',hint:'',attempts:[],last:null,byApp:false,clues:[],twoMid:false,pending:false,guessers:[],gpos:0,guesses:[],used:[],gains:[]};
+}
+var G=fresh(), saved=null, busy=false, notice='';
+function save(){ try{ G.ts=Date.now(); localStorage.setItem(KEY,JSON.stringify(G)); }catch(e){} }
+/* a partida salva vale por 10 minutos depois da última jogada ou de sair da página */
+function loadSaved(){
+  try{
+    var s=localStorage.getItem(KEY); if(!s) return null;
+    var o=JSON.parse(s);
+    if(!o || !Array.isArray(o.players) || !o.players.length || typeof o.phase!=='string' || o.phase==='home') return null;
+    if(!o.ts || Date.now()-o.ts>TTL){ localStorage.removeItem(KEY); return null; }
+    return o;
+  }catch(e){}
+  return null;
+}
+saved=loadSaved();
+var resumeMsg='';
+if(saved){ G=saved; saved=null; resumeMsg='Partida retomada de onde você parou.'; }
+/* ---------- helpers de DOM ---------- */
+function h(tag,props){
+  var e=document.createElement(tag), i, k;
+  if(props){
+    for(k in props){
+      var v=props[k];
+      if(v===false||v==null) continue;
+      if(k==='class') e.className=v;
+      else if(k==='on'){ for(var ev in v) e.addEventListener(ev,v[ev]); }
+      else if(k==='disabled'||k==='checked'||k==='hidden') e[k]=!!v;
+      else e.setAttribute(k,v===true?'':v);
+    }
+  }
+  for(i=2;i<arguments.length;i++){
+    var c=arguments[i]; if(c==null||c===false) continue;
+    e.append(c.nodeType?c:document.createTextNode(String(c)));
+  }
+  return e;
+}
+function btn(text,onclick,cls,extra){
+  var p={type:'button',class:'btn'+(cls?' '+cls:''),on:{click:onclick}};
+  if(extra) for(var k in extra) p[k]=extra[k];
+  return h('button',p,text);
+}
+function go(phase){ G.phase=phase; save(); render(); }
+function others(){ var n=G.players.length,a=[],i; for(i=1;i<n;i++) a.push((G.turn+i)%n); return a; }
+function giver(){ return G.players[G.turn]; }
+function pctBand(p){ return p>=OK?'high':p>=60?'mid':'low'; }
+function pctLabel(p){ return p>=95?'Dica excelente':p>=90?'Dica muito boa':p>=80?'Quase lá':p>=70?'Perto':p>=50?'Morna':p>=25?'Fria':p>=10?'Muito fria':'Quase nada a ver'; }
+function meter(p){
+  var fill=h('div',{class:'fill '+pctBand(p)});
+  var m=h('div',{class:'meter',role:'img','aria-label':p+' por cento'},fill);
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){ fill.style.width=p+'%'; }); });
+  return m;
+}
+function entryOf(word){ for(var i=0;i<WORDS.length;i++) if(WORDS[i][0]===word) return WORDS[i]; return null; }
+function hintOf(word){ var e=entryOf(word); return e?e[1]:''; }
+
+/* ---------- análise da dica ---------- */
+async function scoreClue(clue,word,hint,entry){
+  var r=localScore(clue,word,hint,entry,WORDS);
+  return {pct:r.pct,method:r.exact?'exact':'lex',kind:r.kind};
+}
+
+/* ---------- fluxo ---------- */
+function startRegister(){ G=fresh(); notice=''; go('register'); }
+function addPlayer(name){
+  name=name.replace(/\s+/g,' ').trim();
+  if(!name) return;
+  if(G.players.length>=10){ notice='O limite é 10 jogadores.'; return render(); }
+  if(G.players.some(function(p){return p.name.toLowerCase()===name.toLowerCase();})){ notice='Já existe um jogador chamado '+name+'. Use outro nome.'; return render(); }
+  G.players.push({name:name,score:0}); notice=''; save(); render();
+}
+function startGame(){
+  if(G.players.length<2||G.players.length>10) return;
+  G.players.forEach(function(p){p.score=0;});
+  G.round=1; G.turn=0; G.used=[]; go('turnIntro');
+}
+function beginTurn(){
+  var pool=WORDS.map(function(w){return w[0];}).filter(function(w){return G.used.indexOf(w)<0;});
+  if(pool.length<5){ G.used=[]; pool=WORDS.map(function(w){return w[0];}); }
+  var opts=[];
+  while(opts.length<5){ var i=Math.floor(Math.random()*pool.length); opts.push(pool.splice(i,1)[0]); }
+  G.options=opts; G.picked=null; go('pick');
+}
+function confirmWord(){
+  if(!G.picked) return;
+  G.word=G.picked; G.hint=hintOf(G.word); G.used.push(G.word);
+  G.attempts=[]; G.last=null; G.byApp=false; G.clues=[]; G.twoMid=false; G.pending=false; notice=''; go('clue');
+}
+async function submitClue(text){
+  if(busy) return;
+  var raw=text.replace(/\s+/g,' ').trim();
+  if(!raw) return;
+  var bad=checkClue(raw,G.attempts.map(function(a){return a.clue;}),WORDS);
+  if(bad){ notice=bad; return render(); }
+  busy=true; notice=''; render();
+  var res=await scoreClue(raw,G.word,G.hint,entryOf(G.word));
+  busy=false;
+  if(res.pct>=100){ notice='Essa dica é a própria palavra, não vale. Tente outra, ela não gasta tentativa.'; return render(); }
+  G.attempts.push({clue:raw,pct:res.pct});
+  G.last={clue:raw,pct:res.pct,method:res.method,kind:res.kind,app:false};
+  var mids=G.attempts.filter(function(a){return a.pct>50;});
+  if(mids.length>=2){ G.clues=[mids[0].clue,mids[1].clue]; G.twoMid=true; G.pending=true; }
+  save(); render();
+}
+function endClues(){ G.pending=false; go('clueOk'); }
+function nextClue(){ G.last=null; notice=''; save(); render(); }
+function appGivesClue(){
+  var mids=G.attempts.filter(function(a){return a.pct>50;});
+  var valid=G.attempts.some(function(a){return a.pct>=OK;});
+  G.clues=mids.map(function(a){return a.clue;});
+  G.byApp=!valid; G.twoMid=true;
+  if(!valid) G.clues.push(G.hint);
+  go('clueOk');
+}
+function callGuessers(){ G.guessers=others(); G.gpos=0; G.guesses=[]; go('pass'); }
+function submitGuess(text){
+  var t=text.replace(/\s+/g,' ').trim(); if(!t) return;
+  G.guesses.push({i:G.guessers[G.gpos],text:t,ok:isCorrect(t,G.word)});
+  G.gpos++;
+  if(G.gpos<G.guessers.length){ go('pass'); } else { finishGuessing(); }
+}
+function finishGuessing(){
+  G.gains=G.players.map(function(){return 0;});
+  var right=0;
+  G.guesses.forEach(function(g){ if(g.ok){ right++; G.gains[g.i]+=2; } });
+  if(!G.byApp){
+    G.gains[G.turn]+=3-right;
+  }
+  G.players.forEach(function(p,i){ p.score+=G.gains[i]; });
+  go('reveal');
+}
+function nextTurn(){
+  G.turn++; G.gains=[];
+  if(G.turn<G.players.length) go('turnIntro'); else go('roundEnd');
+}
+function newRound(){ G.round++; G.turn=0; G.gains=[]; go('turnIntro'); }
+function changePlayers(){ var names=G.players.map(function(p){return p.name;}); G=fresh(); G.players=names.map(function(n){return {name:n,score:0};}); go('register'); }
+
+/* ---------- telas ---------- */
+function scoreboard(showDelta){
+  var order=G.players.map(function(p,i){return {p:p,i:i};}).sort(function(a,b){return b.p.score-a.p.score||a.i-b.i;});
+  var ol=h('ol',{class:'score'});
+  order.forEach(function(o,k){
+    var d=showDelta&&G.gains&&G.gains[o.i]?G.gains[o.i]:0;
+    ol.append(h('li',null,h('span',{class:'r'},String(k+1)),h('span',{class:'nm'},o.p.name),h('span',{class:'delta'+(d<0?' neg':'')+(d?'':' none')},d>0?'+'+d:d<0?'\u2212'+Math.abs(d):'+0'),h('span',{class:'pt'},String(o.p.score))));
+  });
+  return ol;
+}
+var KIND_NOTE={
+  syn:'Sinônimo da palavra.',
+  esp:'Característica muito específica da palavra.',
+  car:'Característica da palavra.',
+  assoc:'Tem relação com a palavra.',
+  broad:'Relação ampla, pouco específica.',
+  ant:'Oposto da palavra.',
+  phon:'O som é igual ou parecido com o da palavra.',
+  stem:'Mesma família de palavras.',
+  sim:'Escrita parecida com a palavra.',
+  rel:'Parente distante da palavra.',
+  floor:'Quase nenhuma relação com a palavra.'
+};
+function resultCard(){
+  var L=G.last, note=null;
+  if(L.app) note='Ninguém passou de 90% em '+MAX_CLUES+' tentativas, então o app deu a dica.';
+  else note=KIND_NOTE[L.kind]||null;
+  return h('div',{class:'card','aria-live':'polite'},
+    h('div',{class:'label'},L.app?'Dica do app':'Resultado da dica'),
+    h('div',{class:'clue'},L.clue),
+    h('div',{class:'pct'},String(L.pct),h('small',null,'%')),
+    meter(L.pct),
+    h('div',{class:'tick'},h('span',null,'0%'),h('span',null,'90% para valer'),h('span',null,'100%')),
+    h('p',null,h('b',null,L.app?'Dica 99%':pctLabel(L.pct)),L.pct>=OK?(L.app?'':' Dica válida!'):' Ficou abaixo de 90%.'),
+    note?h('p',{class:'small muted'},note):null
+  );
+}
+
+function clueList(){ return (G.clues&&G.clues.length?G.clues:[G.last.clue]).join(' · '); }
+function clueBlock(){
+  var arr=G.clues&&G.clues.length?G.clues:[G.last.clue], box=h('div',{class:'screen',style:'gap:6px'});
+  arr.forEach(function(c){ box.append(h('div',{class:'clue',style:arr.length>1?'font-size:clamp(28px,9vw,40px)':null},c)); });
+  return box;
+}
+function midCard(){
+  var chips=h('div',{class:'chips'}), n=G.clues.length;
+  G.clues.forEach(function(c){
+    var a=G.attempts.filter(function(x){return x.clue===c;})[0];
+    chips.append(h('span',{class:'chip'},c+' ',h('b',null,(a?a.pct:99)+'%')));
+  });
+  var msg=G.byApp?'Ninguém passou de 90% em '+MAX_CLUES+' tentativas, então o app completou com uma dica 99%.':(n<2?'As '+MAX_CLUES+' tentativas acabaram.':'Duas dicas passaram de 50%.');
+  return h('div',{class:'card','aria-live':'polite'},
+    h('div',{class:'label'},'Fim das dicas'),
+    h('p',null,h('b',null,msg),' Os outros vão adivinhar com '+(n>1?'estas dicas.':'esta dica.')),
+    chips);
+}
+var SCREENS={
+  home:function(){
+    var s=h('section',{class:'screen'});
+    s.append(h('h1',null,'Palavra Secreta'));
+    s.append(h('p',{class:'lead'},'Dê dicas que levam à palavra sem dizê-la. De 2 a 10 jogadores, um celular passando de mão em mão.'));
+    s.append(btn('Cadastrar jogadores',startRegister));
+    s.append(h('div',{class:'example'},
+      h('div',{class:'label'},'Exemplo'),
+      h('div',{class:'pair'},h('span',{class:'muted'},'Palavra'),h('span',{class:'w'},'livraria'),h('span',{class:'muted'},'Dica'),h('span',{class:'w'},'livro')),
+      meter(98),
+      h('div',{class:'small muted'},'98%: dica excelente, vale como dica válida.')
+    ));
+    s.append(h('details',null,h('summary',null,'Como jogar'),h('ol',null,
+      h('li',null,'Cada jogador, na sua vez, escolhe uma entre 5 palavras e fica com o celular.'),
+      h('li',null,'Escreve uma dica de até 15 caracteres. O app mostra de 0 a 100% o quanto ela aponta para a palavra.'),
+      h('li',null,'O app sempre pede pelo menos 2 dicas acima de 50%, mesmo que uma delas seja de 99%. Quando as duas saem, os outros adivinham. São até 7 dicas; se nenhuma chegar a 90%, o app dá uma dica 99%.'),
+      h('li',null,'Com a dica válida, os outros jogadores escrevem seus palpites, um de cada vez.'),
+      h('li',null,'Quem acerta ganha 2 pontos. Quem deu as dicas ganha 3 pontos menos 1 por pessoa que acertar, e pode ficar negativo (num jogo de 5, se os 4 acertarem, ficam −1).')
+    )));
+    s.append(h('details',null,h('summary',null,'Como a % é calculada'),h('ol',null,
+      h('li',null,'Sinônimo da palavra: acima de 90%.'),
+      h('li',null,'Característica que define a coisa: acima de 80%, e quanto mais específica, maior. Duas características juntas valem ainda mais.'),
+      h('li',null,'Antônimo (o oposto): acima de 70%.'),
+      h('li',null,'Palavra com som igual ou parecido: alta.'),
+      h('li',null,'Relação ampla, como a categoria: baixa. Sem relação nenhuma: muito baixa, mas nunca 0%.')
+    )));
+    s.append(h('p',{class:'small muted'},'Se a tela fechar ou o celular cair, abra o jogo de novo em até 10 minutos, no mesmo aparelho, e a partida continua de onde parou.'));
+    s.append(h('p',{class:'small muted'},'Funciona sem internet e sem inteligência artificial: o app compara a dica com sinônimos, palavras da mesma família e palavras relacionadas guardadas nele mesmo.'));
+    return s;
+  },
+  register:function(){
+    var n=G.players.length, s=h('section',{class:'screen'});
+    s.append(h('h2',null,'Quem vai jogar?'));
+    s.append(h('p',{class:'muted'},'Cadastre de 2 a 10 jogadores. Já são '+n+'.'));
+    var input=h('input',{class:'field',id:'nameInput',maxlength:'14',autocomplete:'off',placeholder:'Nome do jogador','aria-label':'Nome do jogador','data-autofocus':'1'});
+    input.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); addPlayer(input.value); } });
+    var form=h('div',{class:'row'},input,h('button',{type:'button',class:'btn',disabled:n>=10,on:{click:function(){ addPlayer(input.value); }}},'Adicionar'));
+    s.append(form);
+    if(notice) s.append(h('div',{class:'msg bad',role:'alert'},notice));
+    if(n){
+      var ul=h('ul',{class:'players'});
+      G.players.forEach(function(p,i){
+        ul.append(h('li',null,h('span',{class:'n'},String(i+1)),h('span',{class:'name'},p.name),
+          h('button',{type:'button',class:'x','aria-label':'Remover '+p.name,on:{click:function(){ G.players.splice(i,1); notice=''; save(); render(); }}},'×')));
+      });
+      s.append(ul);
+    }
+    s.append(btn(n<2?(n===0?'Faltam 2 para começar':'Falta 1 para começar'):'Iniciar jogo',startGame,'',{disabled:n<2}));
+    return s;
+  },
+  turnIntro:function(){
+    var s=h('section',{class:'screen'}), p=giver();
+    s.append(h('div',{class:'tag'},'Rodada '+G.round+' · vez '+(G.turn+1)+' de '+G.players.length));
+    s.append(h('div',{class:'card'},
+      h('div',{class:'label'},'Quem dá as dicas'),
+      h('div',{class:'bigname'},p.name),
+      h('p',{class:'muted'},'Só '+p.name+' deve olhar a tela. Os outros viram o rosto até receber o celular.'),
+      btn('Começar jogador '+(G.turn+1)+': '+p.name,beginTurn)
+    ));
+    s.append(h('div',{class:'card'},h('h3',null,'Pontuação'),scoreboard(false)));
+    return s;
+  },
+  pick:function(){
+    var s=h('section',{class:'screen'});
+    s.append(h('h2',null,giver().name+', escolha uma palavra'));
+    s.append(h('p',{class:'muted'},'Depois de escolher, o botão "Consultar palavra" no topo mostra a palavra caso você esqueça.'));
+    var box=h('div',{class:'opts',role:'radiogroup','aria-label':'Palavras'});
+    G.options.forEach(function(w){
+      box.append(h('button',{type:'button',class:'opt',role:'radio','aria-checked':G.picked===w?'true':'false',on:{click:function(){ G.picked=w; save(); render(); }}},w));
+    });
+    s.append(box);
+    s.append(btn('Usar esta palavra',confirmWord,'',{disabled:!G.picked}));
+    return s;
+  },
+  clue:function(){
+    var s=h('section',{class:'screen'}), n=G.attempts.length;
+    if(G.last){
+      s.append(h('div',{class:'tag'},'Dica '+n+' de '+MAX_CLUES+' usada'));
+      s.append(resultCard());
+      var mids1=G.attempts.filter(function(a){return a.pct>50;}).length;
+      if(!G.pending&&mids1===1) s.append(h('p',{class:'small muted'},'Esta passou de 50%. O app sempre pede 2 dicas acima de 50%, mesmo que uma seja 99%: falta mais uma.'));
+      if(G.pending){ s.append(h('p',{class:'small muted'},'Duas dicas passaram de 50%: as dicas acabam aqui.')); s.append(btn('Continuar',endClues)); }
+      else s.append(n>=MAX_CLUES?btn('Encerrar as dicas',appGivesClue):btn('Dar outra dica',nextClue));
+      return s;
+    }
+    s.append(h('div',{class:'tag'},'Dica '+(n+1)+' de '+MAX_CLUES));
+    s.append(h('h2',null,'Escreva sua dica'));
+    s.append(h('p',{class:'muted'},'Até 15 caracteres, pode ser mais de uma palavra. Não vale usar a própria palavra.'));
+    var input=h('input',{class:'field',id:'clueInput',maxlength:'15',autocomplete:'off',autocapitalize:'none',spellcheck:'false',placeholder:'Sua dica','aria-label':'Sua dica','data-autofocus':'1'});
+    var count=h('div',{class:'counter'},'0/15');
+    input.addEventListener('input',function(){ count.textContent=input.value.length+'/15'; });
+    input.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); submitClue(input.value); } });
+    var go1=h('button',{type:'button',class:'btn',disabled:busy,on:{click:function(){ submitClue(input.value); }}},busy?'Analisando…':'Ver % da dica');
+    var form=h('div',{class:'card'},h('label',{class:'label',for:'clueInput'},'Dica'),input,count,go1);
+    s.append(form);
+    if(notice) s.append(h('div',{class:'msg',role:'alert'},notice));
+    if(n){
+      var chips=h('div',{class:'chips'});
+      G.attempts.forEach(function(a){ chips.append(h('span',{class:'chip'},a.clue+' ',h('b',null,a.pct+'%'))); });
+      s.append(h('div',null,h('div',{class:'label'},'Dicas anteriores'),chips));
+    }
+    s.append(h('p',{class:'small muted'},'São precisas 2 dicas acima de 50% (uma de 90% ou mais conta como uma). Se nenhuma chegar a 90% até a 7ª, o app dá uma dica 99%.'));
+    return s;
+  },
+  clueOk:function(){
+    var s=h('section',{class:'screen'});
+    s.append(G.twoMid?midCard():resultCard());
+    if(G.byApp) s.append(h('p',{class:'small muted'},'Como a dica foi do app, quem dava as dicas não ganha nem perde pontos nesta vez. Quem acertar ganha 2.'));
+    var first=G.players[others()[0]].name;
+    s.append(btn('Chamar '+first+' para adivinhar',callGuessers));
+    return s;
+  },
+  pass:function(){
+    var s=h('section',{class:'screen'}), p=G.players[G.guessers[G.gpos]];
+    s.append(h('div',{class:'tag'},'Adivinhador '+(G.gpos+1)+' de '+G.guessers.length));
+    s.append(h('div',{class:'card'},
+      h('div',{class:'label'},'Passe o celular para'),
+      h('div',{class:'bigname'},p.name),
+      h('p',{class:'muted'},'Quem já palpitou não mostra a resposta a ninguém.'),
+      btn('Sou '+p.name+': escrever palpite',function(){ go('guess'); })
+    ));
+    return s;
+  },
+  guess:function(){
+    var s=h('section',{class:'screen'}), p=G.players[G.guessers[G.gpos]];
+    s.append(h('div',{class:'tag'},p.name+' · palpite '+(G.gpos+1)+' de '+G.guessers.length));
+    s.append(h('div',{class:'card'},h('div',{class:'label'},G.clues&&G.clues.length>1?'As dicas são':'A dica é'),clueBlock()));
+    var input=h('input',{class:'field',id:'guessInput',maxlength:'30',autocomplete:'off',autocapitalize:'none',spellcheck:'false',placeholder:'Qual é a palavra?','aria-label':'Seu palpite','data-autofocus':'1'});
+    input.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); submitGuess(input.value); } });
+    s.append(h('div',{class:'card'},h('label',{class:'label',for:'guessInput'},'Seu palpite'),input,h('button',{type:'button',class:'btn',on:{click:function(){ submitGuess(input.value); }}},'Confirmar palpite')));
+    return s;
+  },
+  reveal:function(){
+    var s=h('section',{class:'screen'}), anyOk=G.guesses.some(function(g){return g.ok;});
+    s.append(h('div',{class:'card'},h('div',{class:'label'},'A palavra era'),h('div',{class:'secret',style:'text-align:left'},G.word),h('p',{class:'muted'},(G.clues&&G.clues.length>1?'Dicas: ':'Dica: ')+clueList())));
+    var box=h('div',{class:'screen',style:'gap:8px'});
+    G.guesses.forEach(function(g){
+      box.append(h('div',{class:'guess'+(g.ok?' ok':'')},
+        h('div',{style:'min-width:0'},h('div',{class:'who'},G.players[g.i].name),h('div',{class:'what'},g.text)),
+        h('span',{class:'verdict '+(g.ok?'ok':'no')},g.ok?'Acertou +2':'Errou')));
+    });
+    s.append(box);
+    var allOk=G.guesses.every(function(g){return g.ok;});
+    var nOk=G.guesses.filter(function(g){return g.ok;}).length, dg=3-nOk;
+    if(G.byApp) s.append(h('div',{class:'msg'},(nOk?nOk+(nOk===1?' pessoa acertou':' pessoas acertaram'):'Ninguém acertou')+'. Como a dica foi do app, '+giver().name+' não pontua.'));
+    else s.append(h('div',{class:'msg'},(nOk?nOk+(nOk===1?' pessoa acertou':' pessoas acertaram'):'Ninguém acertou')+': 3 \u2212 '+nOk+' = '+(dg<0?'\u2212'+Math.abs(dg):dg)+(Math.abs(dg)===1?' ponto':' pontos')+' para '+giver().name+'.'));
+    s.append(h('div',{class:'card'},h('h3',null,'Pontuação'),scoreboard(true)));
+    var last=G.turn+1>=G.players.length;
+    s.append(btn(last?'Ver fim da rodada':'Próximo: '+G.players[G.turn+1].name,nextTurn));
+    return s;
+  },
+  roundEnd:function(){
+    var s=h('section',{class:'screen'});
+    var top=Math.max.apply(null,G.players.map(function(p){return p.score;}));
+    var win=G.players.filter(function(p){return p.score===top;}).map(function(p){return p.name;});
+    s.append(h('div',{class:'tag'},'Fim da rodada '+G.round));
+    s.append(h('h2',null,win.length>1?'Empate na frente: '+win.join(', '):win[0]+' lidera com '+top+' pontos'));
+    s.append(h('div',{class:'card'},h('h3',null,'Pontuação'),scoreboard(false)));
+    s.append(btn('Nova rodada (a pontuação continua)',newRound));
+    s.append(btn('Trocar jogadores',changePlayers,'ghost'));
+    s.append(btn('Voltar ao início',function(){ G=fresh(); saved=null; try{localStorage.removeItem(KEY);}catch(e){} go('home'); },'ghost'));
+    return s;
+  }
+};
+
+function render(){
+  var v=document.getElementById('view'), extra=document.getElementById('topExtra'), rt=document.getElementById('roundTag');
+  v.replaceChildren(SCREENS[G.phase]());
+  if(resumeMsg){ v.prepend(h('div',{class:'msg info',role:'status'},resumeMsg)); resumeMsg=''; }
+  rt.textContent=(G.players.length && G.phase!=='home' && G.phase!=='register')?'Rodada '+G.round:'';
+  extra.replaceChildren();
+  if(G.phase==='clue'||G.phase==='clueOk') extra.append(btn('Consultar palavra',openWord,'sm soft wide'));
+  window.scrollTo(0,0);
+  var f=v.querySelector('[data-autofocus]');
+  if(f && !busy) setTimeout(function(){ try{ f.focus(); }catch(e){} },30);
+}
+
+/* ---------- consultar palavra ---------- */
+var modal=document.getElementById('modal');
+function openWord(){
+  document.getElementById('secretWord').textContent=G.word;
+  modal.hidden=false;
+  document.getElementById('closeModal').focus();
+}
+function closeWord(){ modal.hidden=true; document.getElementById('secretWord').textContent=''; }
+document.getElementById('closeModal').addEventListener('click',closeWord);
+document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ if(!modal.hidden) closeWord(); if(!rmodal.hidden) closeRestart(); } });
+
+/* ---------- começar de novo (sempre disponível) ---------- */
+var rmodal=document.getElementById('restartModal');
+function openRestart(){
+  document.getElementById('restartKeep').hidden=!G.players.length;
+  rmodal.hidden=false;
+  document.getElementById('restartBack').focus();
+}
+function closeRestart(){ rmodal.hidden=true; }
+document.getElementById('restartBtn').addEventListener('click',openRestart);
+document.getElementById('restartBack').addEventListener('click',closeRestart);
+document.getElementById('restartKeep').addEventListener('click',function(){
+  var names=G.players.map(function(p){return p.name;});
+  closeRestart(); busy=false; notice=''; closeWord();
+  G=fresh(); G.players=names.map(function(n){return {name:n,score:0};});
+  if(names.length>=2) startGame(); else go('register');
+});
+document.getElementById('restartAll').addEventListener('click',function(){
+  closeRestart(); busy=false; notice=''; closeWord();
+  G=fresh(); try{ localStorage.removeItem(KEY); }catch(e){}
+  go('home');
+});
+document.addEventListener('visibilitychange',function(){ if(document.hidden && G.phase!=='home') save(); });
+window.addEventListener('pagehide',function(){ if(G.phase!=='home') save(); });
+
+render();
+})();
+</script>
+
+</body></html>
